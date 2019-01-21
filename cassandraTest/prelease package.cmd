@@ -1,0 +1,1 @@
+mvn -Prelease clean package
