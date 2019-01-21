@@ -1,6 +1,5 @@
 package com.yufei.test;
 
-import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.yufeiblog.cassandra.SessionManager;
 import com.yufeiblog.cassandra.common.EtcdConfiguraion;
 import com.yufeiblog.cassandra.dcmonitor.DCStatusWatcher;
