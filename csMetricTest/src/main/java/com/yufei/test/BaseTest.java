@@ -1,5 +1,8 @@
 package com.yufei.test;
 
+import com.codahale.metrics.ExponentiallyDecayingReservoir;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.UniformReservoir;
 import com.yufeiblog.cassandra.SessionManager;
 import com.yufeiblog.cassandra.common.EtcdConfiguraion;
 import com.yufeiblog.cassandra.dcmonitor.DCStatusWatcher;
@@ -13,6 +16,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 abstract class BaseTest implements Runnable {
 
@@ -31,6 +35,11 @@ abstract class BaseTest implements Runnable {
     protected int threadNums = 2;
     protected CountDownLatch countDownLatch = new CountDownLatch(threadNums);
     protected String currentDC="DC1";
+    private AtomicInteger successTimes=new AtomicInteger(0);
+    private AtomicInteger failureTimes=new AtomicInteger(0);
+    private ExponentiallyDecayingReservoir decayingReservoir = new ExponentiallyDecayingReservoir();
+    private UniformReservoir uniformReservoir = new UniformReservoir();
+    private Histogram histogram = new Histogram(uniformReservoir);
 
     public BaseTest() {
         init();
@@ -98,5 +107,15 @@ abstract class BaseTest implements Runnable {
         }catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+    public  void onSuccess(long exeTime){
+        uniformReservoir.update(exeTime);
+        decayingReservoir.update(exeTime);
+        successTimes.incrementAndGet();
+    }
+
+    public void onFailure(){
+        failureTimes.incrementAndGet();
     }
 }
