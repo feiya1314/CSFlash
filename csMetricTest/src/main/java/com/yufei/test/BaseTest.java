@@ -12,13 +12,10 @@ import com.yufeiblog.cassandra.loadbalance.SwitchLoadbalancePolicy;
 import com.yufeiblog.cassandra.service.CassandraManageService;
 import com.yufeiblog.cassandra.service.ICassandraManageService;
 
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
-abstract class BaseTest implements Runnable {
+abstract class BaseTest {
 
     protected int appId = 20190103;
     protected String replication = "{\"class\": \"NetworkTopologyStrategy\",\"DC1\": \"3\",\"DC2\": \"3\"}";
@@ -31,12 +28,12 @@ abstract class BaseTest implements Runnable {
     protected AtomicInteger uid = new AtomicInteger(startUid);
     protected int recordSize = 5;
     protected int lastingTime = 60 * 1000;
-    protected volatile boolean keepRunning = true;
+
     protected int threadNums = 2;
     protected CountDownLatch countDownLatch = new CountDownLatch(threadNums);
-    protected String currentDC="DC1";
-    private AtomicInteger successTimes=new AtomicInteger(0);
-    private AtomicInteger failureTimes=new AtomicInteger(0);
+    protected String currentDC = "DC1";
+    private AtomicInteger successTimes = new AtomicInteger(0);
+    private AtomicInteger failureTimes = new AtomicInteger(0);
     private ExponentiallyDecayingReservoir decayingReservoir = new ExponentiallyDecayingReservoir();
     private UniformReservoir uniformReservoir = new UniformReservoir();
     private Histogram histogram = new Histogram(uniformReservoir);
@@ -45,34 +42,9 @@ abstract class BaseTest implements Runnable {
         init();
     }
 
-    @Override
-    public void run() {
-
-        if (lastingTime > 0) {
-            Timer timer = new Timer();
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    keepRunning = false;
-                    timer.cancel();
-                }
-            }, lastingTime);
-        }
-
-        while (keepRunning) {
-            test();
-            try {
-                Thread.sleep(500);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        System.out.println(Thread.currentThread().getName() + " stop running");
-        countDownLatch.countDown();
-    }
 
     private void init() {
-        SwitchLoadbalancePolicy loadBalancingPolicy =  new SimpleDCSwitchPolicy(new DCSwitchRoundRobinPolicy());
+        SwitchLoadbalancePolicy loadBalancingPolicy = new SimpleDCSwitchPolicy(new DCSwitchRoundRobinPolicy());
         loadBalancingPolicy.setLoaclDC(currentDC);
         SessionManager.Builder builder = SessionManager.builder()
                 .withCredentials(username, password)
@@ -87,7 +59,7 @@ abstract class BaseTest implements Runnable {
         etcdConfiguraion.setEctdHosts(etcdhost);
         etcdConfiguraion.setServiceName("yftest");
         etcdConfiguraion.setClusterName("yftest");
-        DCStatusWatcher dcStatusWatcher = new DCStatusWatcher(sessionManager.getSessionRepository(),etcdConfiguraion);
+        DCStatusWatcher dcStatusWatcher = new DCStatusWatcher(sessionManager.getSessionRepository(), etcdConfiguraion);
         dcStatusWatcher.init();
         service = new CassandraManageService(sessionManager.getSessionRepository());
     }
@@ -96,7 +68,7 @@ abstract class BaseTest implements Runnable {
 
     public void execute() {
         for (int i = 0; i < threadNums; i++) {
-            Thread thread1 = new Thread(this);
+            Thread thread1 = new Thread(new Tester(this,countDownLatch));
             thread1.setName("thread " + (i + 1));
             thread1.start();
         }
@@ -104,18 +76,19 @@ abstract class BaseTest implements Runnable {
             countDownLatch.await();
             System.out.println("all thread running out");
             System.exit(0);
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public  void onSuccess(long exeTime){
+    public void onSuccess(long exeTime) {
         uniformReservoir.update(exeTime);
         decayingReservoir.update(exeTime);
         successTimes.incrementAndGet();
+        //  uniformReservoir.getSnapshot().
     }
 
-    public void onFailure(){
+    public void onFailure() {
         failureTimes.incrementAndGet();
     }
 }

@@ -9,14 +9,7 @@ public class SaveCase extends BaseTest {
     @Override
     protected void test() {
         Map<String, Object>[] records = getRecords();
-        long startTime=System.currentTimeMillis();
-        try {
-            service.save(appId, tableName, records, null);
-        }catch (Exception e){
-            //handleExe
-            onFailure();
-        }
-        onSuccess(System.currentTimeMillis()-startTime);
+        service.save(appId, tableName, records, null);
     }
 
     protected Map<String, Object>[] getRecords() {
