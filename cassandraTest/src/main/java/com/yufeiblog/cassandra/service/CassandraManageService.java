@@ -1,15 +1,15 @@
 package com.yufeiblog.cassandra.service;
 
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.*;
+import com.datastax.driver.core.querybuilder.Clause;
 import com.datastax.driver.core.querybuilder.Insert;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.schemabuilder.Create;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.yufeiblog.cassandra.SessionRepository;
 import com.yufeiblog.cassandra.common.*;
+import com.yufeiblog.cassandra.common.builder.FindResultBuilder;
 import com.yufeiblog.cassandra.exception.CSException;
 import com.yufeiblog.cassandra.model.Column;
 import com.yufeiblog.cassandra.model.ColumnOperation;
@@ -21,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 
 public class CassandraManageService extends BaseService implements ICassandraManageService {
@@ -166,7 +167,15 @@ public class CassandraManageService extends BaseService implements ICassandraMan
 
     @Override
     public FindResult find(int appId, String tableName, String[] columns, Condition[] conditions, String cursor, Integer limit, QueryOption options) {
-        return null;
+        FindResultBuilder findBuilder = new FindResultBuilder(appId,tableName,sessionRepository);
+        findBuilder.withColumns(columns).withCondition(conditions).withCursor(cursor,limit);
+
+        List<Map<String,Object>> results =  findBuilder.find();
+        FindResult findResult = new FindResult();
+        findResult.setCount(results.size());
+        findResult.setResults(results);
+        findResult.setCursor(findBuilder.getCursor());
+        return findResult;
     }
 
     @Override
