@@ -5,7 +5,9 @@ import com.yufeiblog.cassandra.SessionRepository;
 import com.yufeiblog.cassandra.common.Condition;
 import com.yufeiblog.cassandra.common.Cursor;
 import com.yufeiblog.cassandra.common.PagingStateCursor;
+import com.yufeiblog.cassandra.model.TableDefination;
 import com.yufeiblog.cassandra.utils.Utils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -40,11 +42,19 @@ public class FindResultBuilder {
             return this;
         }
         values = new Object[conditions.length];
+        TableDefination tableDefination = sessionRepository.getTableDefination(appId,tableName);
+        String[] pks = tableDefination.getPrimaryKeys();
         StringBuilder sb = new StringBuilder();
         sb.append(prefixSql).append(" WHERE ");
         int i = 0;
         for (Condition condition : conditions) {
-            sb.append(condition.getColumnName()).append(condition.getOperator()).append("?").append(" AND ");
+            String column = condition.getColumnName();
+            int indexOfPk = ArrayUtils.indexOf(pks,column);
+            if (indexOfPk >= tableDefination.getPartitionKeyCount()){
+                sb.append('C').append(column).append(')').append(condition.getOperator()).append("(?)").append(" AND ");
+            }else {
+                sb.append(column).append(condition.getOperator()).append("?").append(" AND ");
+            }
             values[i++] = condition.getValue();
         }
         sb.delete(sb.length() - 5, sb.length());

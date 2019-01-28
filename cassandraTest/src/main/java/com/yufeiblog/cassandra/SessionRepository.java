@@ -1,16 +1,18 @@
 package com.yufeiblog.cassandra;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.yufeiblog.cassandra.common.CassandraConfiguration;
 import com.yufeiblog.cassandra.dcmonitor.DCStatus;
 import com.yufeiblog.cassandra.dcmonitor.DCStatusListener;
 import com.yufeiblog.cassandra.loadbalance.SwitchLoadbalancePolicy;
+import com.yufeiblog.cassandra.model.Column;
+import com.yufeiblog.cassandra.model.TableDefination;
 import com.yufeiblog.cassandra.utils.Utils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,6 +24,7 @@ public class SessionRepository implements DCStatusListener {
     private Map<String, Object> replication;
     private Map<Integer, Session> sessionCache = new HashMap<>();
     protected Map<String, PreparedStatement> statementCache = new ConcurrentHashMap<>();
+    private Map<String, TableDefination> tableDefinationMap = new ConcurrentHashMap<>();
 
     protected SessionRepository(Cluster cluster, CassandraConfiguration configuration, Map<String, Object> replication) {
         this.cluster = cluster;
@@ -49,6 +52,17 @@ public class SessionRepository implements DCStatusListener {
             ((SwitchLoadbalancePolicy) loadBalancingPolicy).setLoaclDC(activeDC);
         }
         cluster.getConfiguration().getPoolingOptions().refreshConnectedHosts();
+    }
+
+    public TableDefination getTableDefination(int appId, String tableName) {
+        TableDefination tableDefination = tableDefinationMap.get(buildTableDefinationKey(appId,tableName));
+        if (tableDefination == null) {
+            tableDefination = new TableDefination();
+            TableMetadata tableMetadata = cluster.getMetadata().getKeyspace(Utils.getKeyspace(appId)).getTable(tableName);
+            return getTableDefinationFromMeta(tableMetadata);
+        }
+
+        return tableDefination;
     }
 
     public Session getSession() {
@@ -90,4 +104,38 @@ public class SessionRepository implements DCStatusListener {
         cluster = null;
     }
 
+    private String buildTableDefinationKey(int appId, String tableName) {
+        return appId + "_" + tableName;
+    }
+
+    private TableDefination getTableDefinationFromMeta(TableMetadata tableMetadata){
+        TableDefination tableDefination = new TableDefination();
+        List<ColumnMetadata> pks = tableMetadata.getPartitionKey();
+        List<ColumnMetadata> primaryKeys = tableMetadata.getPrimaryKey();
+        int size = pks.size()+primaryKeys.size();
+        String[] primary = new String[size];
+        List<ColumnMetadata> allPrimaryKeys = new ArrayList<>();
+        allPrimaryKeys.addAll(pks);
+        allPrimaryKeys.addAll(primaryKeys);
+        int i =0 ;
+        for (ColumnMetadata columnMetadata : allPrimaryKeys){
+            primary[i++] = columnMetadata.getName();
+        }
+        tableDefination.setPrimaryKeys(primary);
+        tableDefination.setPartitionKeyCount(pks.size());
+
+        List<ColumnMetadata> columns = tableMetadata.getColumns();
+        Column[] targetColumns = new Column[columns.size()];
+        i=0;
+        for (ColumnMetadata columnMetadata:columns){
+            targetColumns[i] = new Column();
+            targetColumns[i].setColumnName(columnMetadata.getName());
+            DataType type = columnMetadata.getType();
+            targetColumns[i].setType(type.getName().name());
+            i++;
+        }
+        tableDefination.setColumns(targetColumns);
+        List<ClusteringOrder> clusteringOrders =  tableMetadata.getClusteringOrder();
+        return tableDefination;
+    }
 }
