@@ -2,6 +2,7 @@ package com.yufeiblog.cassandra;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.yufeiblog.cassandra.common.CassandraConfiguration;
 import com.yufeiblog.cassandra.dcmonitor.DCStatus;
 import com.yufeiblog.cassandra.dcmonitor.DCStatusListener;
@@ -42,6 +43,22 @@ public class SessionRepository implements DCStatusListener {
         return statement;
     }
 
+    void selectByToken(String pkName, TokenRange tokenRange,String[] columns, String keyspace, String table){
+
+        Statement statement = QueryBuilder.select(columns).from(keyspace,table)
+                .where(QueryBuilder.gt(QueryBuilder.token(pkName),tokenRange.getStart().getValue()))
+                .and(QueryBuilder.lte(QueryBuilder.token(pkName),tokenRange.getEnd().getValue()));
+        ResultSet resultSet = defaultSession.execute(statement);
+
+    }
+    void selectPkCount(TokenRange tokenRange,String[] columns, String keyspace, String table){
+        Statement statement = QueryBuilder.select("partitions_count").from("system","size_estimates")
+                .where(QueryBuilder.gt("keyspacename",keyspace))
+                .and(QueryBuilder.gt("tablename",table))
+                .and(QueryBuilder.gt("rangestart",tokenRange.getStart().getValue()))
+                .and(QueryBuilder.gt("rangestart",tokenRange.getEnd().getValue()));
+        ResultSet resultSet = defaultSession.execute(statement);
+    }
     @Override
     public void notifyClient(DCStatus dcStatus) {
         //loadbalancePolicy
