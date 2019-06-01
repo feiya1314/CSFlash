@@ -1,5 +1,7 @@
 package com.yufei.test;
 
+import com.yufeiblog.cassandra.result.WriteResult;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,7 +11,7 @@ public class SaveCase extends BaseTest {
     @Override
     protected void test() {
         Map<String, Object>[] records = getRecords();
-        service.save(appId, tableName, records, null);
+        WriteResult writeResult = service.save(appId, tableName, records, null);
     }
 
     protected Map<String, Object>[] getRecords() {

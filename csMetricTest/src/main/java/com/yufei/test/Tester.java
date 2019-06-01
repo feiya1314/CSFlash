@@ -8,7 +8,7 @@ import java.util.concurrent.CountDownLatch;
 public class Tester implements Runnable {
     private BaseTest baseTest;
     private CountDownLatch countDownLatch;
-    private volatile boolean keepRunning;
+    private volatile boolean keepRunning = true;
 
     public Tester(BaseTest baseTest, CountDownLatch countDownLatch) {
         this.baseTest = baseTest;
