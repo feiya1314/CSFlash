@@ -183,7 +183,7 @@ public class SessionManager {
             this.replication = (Map) objectMapper.readValue(replication, Map.class);
         } catch (IOException e) {
             e.printStackTrace();
-            //throw new exception
+            //todo throw new exception
         }
     }
 

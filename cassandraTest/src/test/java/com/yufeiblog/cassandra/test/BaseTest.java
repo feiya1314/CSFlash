@@ -1,6 +1,8 @@
 package com.yufeiblog.cassandra.test;
 
+import com.datastax.driver.core.Session;
 import com.yufeiblog.cassandra.SessionManager;
+import com.yufeiblog.cassandra.SessionRepository;
 import com.yufeiblog.cassandra.service.ICassandraManageService;
 import com.yufeiblog.cassandra.service.CassandraManageService;
 
@@ -12,11 +14,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 abstract class BaseTest implements Runnable {
 
     protected int appId = 20190103;
-    protected String replication = "{\"class\": \"NetworkTopologyStrategy\",\"DC1\": \"2\",\"DC2\": \"2\"}";
-    protected String tableName = "yftest88";
+    protected String replication = "{\"class\": \"NetworkTopologyStrategy\",\"dc1\": \"3\",\"dc1\": \"3\"}";
+    protected String tableName = "yftest";
     protected String username = "cassandra";
     protected String password = "cassandra";
-    protected String contactPoints = "192.168.3.8";
+    protected String contactPoints = "192.168.3.10";
     protected ICassandraManageService service;
     protected int startUid = 1;
     protected AtomicInteger uid = new AtomicInteger(startUid);
@@ -25,6 +27,8 @@ abstract class BaseTest implements Runnable {
     protected volatile boolean keepRunning = true;
     protected int threadNums = 2;
     protected CountDownLatch countDownLatch = new CountDownLatch(threadNums);
+    protected SessionRepository sessionRepository;
+    protected Session session;
 
     public BaseTest() {
         init();
@@ -63,7 +67,9 @@ abstract class BaseTest implements Runnable {
                 .withReplication(replication);
         //.withLoadBalancingPolicy()
         SessionManager sessionManager = builder.build();
-        service = new CassandraManageService(sessionManager.getSessionRepository());
+        sessionRepository = sessionManager.getSessionRepository();
+        service = new CassandraManageService(sessionRepository);
+        session = sessionRepository.getSession();
     }
 
     protected abstract void test();

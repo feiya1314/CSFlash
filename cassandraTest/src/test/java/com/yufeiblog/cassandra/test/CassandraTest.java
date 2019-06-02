@@ -9,6 +9,9 @@ import com.yufeiblog.cassandra.service.CassandraManageService;
 
 public class CassandraTest {
     public static void main(String[] args) {
+        int a =0;
+        int b=12;
+        System.out.println(a+b);
        /* Cluster cluster = null;
         String keyspace = "mykeyspace";
         String tablenName = "mytest";

@@ -149,6 +149,7 @@ public class CassandraManageService extends BaseService implements ICassandraMan
             String[] strings = record.keySet().toArray(new String[record.keySet().size()]);
             insert.values(strings, record.values().toArray(new Object[record.values().size()]));
             resultSet = sessionRepository.getSession(appId).execute(insert);
+            System.out.println(resultSet);
         }
         //Statement statement = prepareStatement(appId, sql);
         WriteResult writeResult = new WriteResult();
