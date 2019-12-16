@@ -6,7 +6,6 @@ import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.DataResource;
 import org.apache.cassandra.auth.IAuthenticator;
 import org.apache.cassandra.auth.IResource;
-import org.apache.cassandra.config.Schema;
 import org.apache.cassandra.exceptions.AuthenticationException;
 import org.apache.cassandra.exceptions.ConfigurationException;
 
@@ -15,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class ScramAuthenticator implements IAuthenticator {
+    private static String SCRAM_SUPPORT = "SCRAM_@#SUPPORT";
     @Override
     public boolean requireAuthentication() {
         return true;
@@ -32,14 +32,14 @@ public class ScramAuthenticator implements IAuthenticator {
 
     @Override
     public void setup() {
-       // String query = String.format("SELECT %s FROM %s.%s WHERE role = ?",
-       //         SALTED_HASH,
-            //    AuthKeyspace.NAME,
-          //      AuthKeyspace.ROLES);
-      //  authenticateStatement = prepare(query);
+        // String query = String.format("SELECT %s FROM %s.%s WHERE role = ?",
+        //         SALTED_HASH,
+        //    AuthKeyspace.NAME,
+        //      AuthKeyspace.ROLES);
+        //  authenticateStatement = prepare(query);
 
-      //  if (Schema.instance.getCFMetaData(AuthKeyspace.NAME, LEGACY_CREDENTIALS_TABLE) != null)
-       //     prepareLegacyAuthenticateStatement();
+        //  if (Schema.instance.getCFMetaData(AuthKeyspace.NAME, LEGACY_CREDENTIALS_TABLE) != null)
+        //     prepareLegacyAuthenticateStatement();
     }
 
     @Override
@@ -52,7 +52,7 @@ public class ScramAuthenticator implements IAuthenticator {
         return null;
     }
 
-    private static class ScramSaslAuthenticator implements SaslNegotiator{
+    private static class ScramSaslAuthenticator implements SaslNegotiator {
         @Override
         public byte[] evaluateResponse(byte[] clientResponse) throws AuthenticationException {
             return new byte[0];
