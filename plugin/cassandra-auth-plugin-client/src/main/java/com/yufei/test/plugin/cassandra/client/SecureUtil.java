@@ -1,17 +1,22 @@
 package com.yufei.test.plugin.cassandra.client;
 
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.PBEParameterSpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
 
 public class SecureUtil {
     private final static String SHA256_ALGORITHM = "PBKDF2WithHmacSHA256";
+    private final static String HMAC_ALGORITHM = "HmacSHA256";
     private final static int ITERATOR_COUNT = 1000;
+    private final static String SERVER_KEY="Server Key";
+    private final static String CLIENT_KEY="Client Key";
 
     public static String base64Encode(byte[] src) {
         Base64.Encoder encoder = Base64.getEncoder();
@@ -24,36 +29,30 @@ public class SecureUtil {
     }
 
     public static byte[] pbkEncode(String password, byte[] salt) throws Exception {
-        PBEKeySpec keySpec = new PBEKeySpec(password.toCharArray());
+        PBEKeySpec keySpec = new PBEKeySpec(password.toCharArray(),salt, ITERATOR_COUNT,128);
         SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(SHA256_ALGORITHM);
         SecretKey secretKey = keyFactory.generateSecret(keySpec);
 
-        PBEParameterSpec paramSpec = new PBEParameterSpec(salt, ITERATOR_COUNT);
-        Cipher cipher = Cipher.getInstance(SHA256_ALGORITHM);
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, paramSpec);
-        return cipher.doFinal();
+        return secretKey.getEncoded();
     }
 
-    public static byte[] pbkDecode(String password, byte[] salt) throws Exception {
-        PBEKeySpec keySpec = new PBEKeySpec(password.toCharArray());
-        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(SHA256_ALGORITHM);
-        SecretKey secretKey = keyFactory.generateSecret(keySpec);
-
-        PBEParameterSpec paramSpec = new PBEParameterSpec(salt, ITERATOR_COUNT);
-        Cipher cipher = Cipher.getInstance(SHA256_ALGORITHM);
-        cipher.init(Cipher.DECRYPT_MODE, secretKey, paramSpec);
-        return cipher.doFinal();
+    public static byte[] hmac(byte[] data) throws Exception{
+        Mac mac = Mac.getInstance(HMAC_ALGORITHM);
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        digest.update();
+        mac.d
     }
 
     public static byte[] random() {
-        byte[] values = new byte[128];
+        byte[] values = new byte[18];
         SecureRandom random = new SecureRandom();
         random.nextBytes(values);
         return values;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception{
         String test = "ytest6765756756ghsdfhgsdhsdgh";
+        System.out.println(base64Encode(pbkEncode(test,random())));
         System.out.println(base64Encode(test.getBytes(StandardCharsets.UTF_8)));
         System.out.println(new String(base64Decode("eXRlc3Q2NzY1NzU2NzU2Z2hzZGZoZ3NkaHNkZ2g=")));
     }
