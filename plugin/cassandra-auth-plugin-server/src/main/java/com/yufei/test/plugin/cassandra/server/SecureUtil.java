@@ -1,4 +1,4 @@
-package com.yufei.test.plugin.cassandra.client;
+package com.yufei.test.plugin.cassandra.server;
 
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
