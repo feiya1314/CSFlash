@@ -2,6 +2,7 @@ package com.yufeiblog.cassandra.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yufeiblog.cassandra.exception.CSException;
+import com.yufeiblog.cassandra.utils.Utils;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -13,6 +14,9 @@ public abstract class Cursor implements Serializable {
     public abstract String cursorToString();
 
     public static Cursor convertToCursor(String cursor) {
+        if (Utils.isStringEmpty(cursor)){
+            return null;
+        }
         char prefix = cursor.charAt(0);
         Cursor newCursor = null;
         String realCursor = String.copyValueOf(cursor.toCharArray(), 1, cursor.length() - 1);
