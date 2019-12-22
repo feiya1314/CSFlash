@@ -13,22 +13,24 @@ import java.util.Base64;
 public class SecureUtil {
     private final static String SHA256_ALGORITHM = "PBKDF2WithHmacSHA256";
     private final static String HMAC_ALGORITHM = "HmacSHA256";
-    public final static int ITERATOR_COUNT = 1000;
-    public final static String SERVER_KEY = "Server Key";
-    public final static String CLIENT_KEY = "Client Key";
-    public final static String STORE_STRING_DELIMITER = "-";
+    protected static String SCRAM_SUPPORT = "SCRAM_@#SUPPORT#";
+    protected final static int ITERATOR_COUNT = 1000;
+    protected final static String SERVER_KEY = "Server Key";
+    protected final static String CLIENT_KEY = "Client Key";
+    protected final static String STORE_STRING_DELIMITER = "-";
+    protected static final String SALTED_HASH = "salted_hash";
 
-    public static String base64Encode(byte[] src) {
+    protected static String base64Encode(byte[] src) {
         Base64.Encoder encoder = Base64.getEncoder();
         return encoder.encodeToString(src);
     }
 
-    public static byte[] base64Decode(String src) {
+    protected static byte[] base64Decode(String src) {
         Base64.Decoder decoder = Base64.getDecoder();
         return decoder.decode(src);
     }
 
-    public static byte[] pbkEncode(String password, byte[] salt) {
+    protected static byte[] pbkEncode(String password, byte[] salt) {
         PBEKeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, ITERATOR_COUNT, 128);
         SecretKey secretKey = null;
         try {
@@ -42,7 +44,7 @@ public class SecureUtil {
         return secretKey.getEncoded();
     }
 
-    public static byte[] hmac(byte[] data, byte[] key) {
+    protected static byte[] hmac(byte[] data, byte[] key) {
         Mac mac = null;
         try {
             mac = Mac.getInstance(HMAC_ALGORITHM);
@@ -56,7 +58,23 @@ public class SecureUtil {
         return mac.doFinal(data);
     }
 
-    public static byte[] sha256(byte[] key) {
+    protected static byte[] xor(byte[] key, byte[] auth) {
+        if (key == null || key.length == 0 || auth == null || auth.length == 0) {
+            return key;
+        }
+
+        byte[] result = new byte[key.length];
+
+        // 使用密钥字节数组循环加密或解密
+        for (int i = 0; i < key.length; i++) {
+            // 数据与密钥异或, 再与循环变量的低8位异或（增加复杂度）
+            result[i] = (byte) (key[i] ^ auth[i % auth.length] ^ (i & 0xFF));
+        }
+
+        return result;
+    }
+
+    protected static byte[] sha256(byte[] key) {
         MessageDigest digest = null;
         try {
             digest = MessageDigest.getInstance("SHA-256");
@@ -69,13 +87,19 @@ public class SecureUtil {
         return digest.digest();
     }
 
-    public static String getSavePwd(byte[] serverKey, byte[] storeKey, byte[] salt, int iteratorCount) {
-        return base64Encode(serverKey) + STORE_STRING_DELIMITER +
+    protected static String getSavePwd(String pwd, int iteratorCount) {
+        byte[] salt = SecureUtil.random();
+        byte[] saltPwd = SecureUtil.pbkEncode(pwd, salt);
+        byte[] serverKey = SecureUtil.hmac(saltPwd, SecureUtil.SERVER_KEY.getBytes(StandardCharsets.UTF_8));
+        byte[] clientKey = SecureUtil.hmac(saltPwd, SecureUtil.CLIENT_KEY.getBytes(StandardCharsets.UTF_8));
+        byte[] storeKey = SecureUtil.sha256(clientKey);
+
+        return SCRAM_SUPPORT + STORE_STRING_DELIMITER + base64Encode(serverKey) + STORE_STRING_DELIMITER +
                 base64Encode(storeKey) + STORE_STRING_DELIMITER +
                 base64Encode(salt) + STORE_STRING_DELIMITER + iteratorCount;
     }
 
-    public static byte[] random() {
+    protected static byte[] random() {
         byte[] values = new byte[18];
         SecureRandom random = new SecureRandom();
         random.nextBytes(values);

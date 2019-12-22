@@ -1,5 +1,7 @@
 package com.yufei.test.plugin.cassandra.server;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import org.apache.cassandra.auth.AuthKeyspace;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.CassandraRoleManager;
@@ -10,13 +12,28 @@ import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
 import org.apache.commons.lang3.StringUtils;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class ScramRoleManager extends CassandraRoleManager {
 
-    public ScramRoleManager() {
+    //private SelectStatement authenticateStatement;
+    /*public ScramRoleManager() {
         super();
-    }
+    }*/
+
+/*    @Override
+    public void setup() {
+        super.setup();
+        String query = String.format("SELECT %s FROM %s.%s WHERE role = ?",
+                SecureUtil.SALTED_HASH,
+                AuthKeyspace.NAME,
+                AuthKeyspace.ROLES);
+        authenticateStatement = (SelectStatement) QueryProcessor.getStatement(query, ClientState.forInternalCalls()).statement;
+
+    }*/
 
     @Override
     public void createRole(AuthenticatedUser performer, RoleResource role, RoleOptions options) throws RequestValidationException, RequestExecutionException {
@@ -27,13 +44,8 @@ public class ScramRoleManager extends CassandraRoleManager {
         if (!options.getOptions().containsKey(Option.PASSWORD)) {
             super.createRole(performer, role, options);
         }
-        byte[] salt = SecureUtil.random();
-        byte[] saltPwd = SecureUtil.pbkEncode(options.getPassword().get(), salt);
-        byte[] serverKey = SecureUtil.hmac(saltPwd, SecureUtil.SERVER_KEY.getBytes(StandardCharsets.UTF_8));
-        byte[] clientKey = SecureUtil.hmac(saltPwd, SecureUtil.CLIENT_KEY.getBytes(StandardCharsets.UTF_8));
-        byte[] storeKey = SecureUtil.sha256(clientKey);
 
-        String savePwd = SecureUtil.getSavePwd(serverKey, storeKey, salt, SecureUtil.ITERATOR_COUNT);
+        String savePwd = SecureUtil.getSavePwd(options.getPassword().get(), SecureUtil.ITERATOR_COUNT);
         String insertCql = String.format("INSERT INTO %s.%s (role, is_superuser, can_login, salted_hash) VALUES ('%s', %s, %s, '%s')",
                 AuthKeyspace.NAME,
                 AuthKeyspace.ROLES,
@@ -44,21 +56,42 @@ public class ScramRoleManager extends CassandraRoleManager {
         QueryProcessor.process(insertCql, consistencyForRole(role.getRoleName()));
     }
 
-
-    @Override
-    public void setup() {
-        super.setup();
-    }
-
     @Override
     public void alterRole(AuthenticatedUser performer, RoleResource role, RoleOptions options) {
         if (!options.getOptions().containsKey(Option.PASSWORD)) {
             super.alterRole(performer, role, options);
         }
 
+        String assignments = Joiner.on(',')
+                .join(StreamSupport.stream(optionsToAssignments(options.getOptions()).spliterator(), false)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList()));
+        if (!Strings.isNullOrEmpty(assignments)) {
+            String query = String.format("UPDATE %s.%s SET %s WHERE role = '%s'",
+                    AuthKeyspace.NAME,
+                    AuthKeyspace.ROLES,
+                    assignments,
+                    escape(role.getRoleName()));
+            QueryProcessor.process(query, consistencyForRole(role.getRoleName()));
+        }
     }
 
     private static String escape(String name) {
         return StringUtils.replace(name, "'", "''");
+    }
+
+    private Iterable<String> optionsToAssignments(Map<Option, Object> options) {
+        return options.entrySet().stream().map(entry -> {
+            switch (entry.getKey()) {
+                case LOGIN:
+                    return String.format("can_login = %s", entry.getValue());
+                case SUPERUSER:
+                    return String.format("is_superuser = %s", entry.getValue());
+                case PASSWORD:
+                    return String.format("salted_hash = '%s'", SecureUtil.getSavePwd((String) entry.getValue(), SecureUtil.ITERATOR_COUNT));
+                default:
+                    return null;
+            }
+        }).collect(Collectors.toList());
     }
 }
