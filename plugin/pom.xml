@@ -35,6 +35,11 @@
             <version>3.0.15</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.zhaoyanblog</groupId>
+            <artifactId>cassandra-secure-plugin</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
 </project>

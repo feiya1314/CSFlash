@@ -5,6 +5,9 @@ import com.datastax.driver.core.policies.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yufeiblog.cassandra.common.CassandraConfiguration;
 import com.yufeiblog.cassandra.common.Validate;
+import com.yufeiblog.cassandra.dcmonitor.DCStatus;
+import com.yufeiblog.cassandra.dcmonitor.DCStatusListener;
+import com.yufeiblog.cassandra.utils.Utils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
@@ -14,7 +17,7 @@ import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Set;
 
-public class SessionManager {
+public class SessionManager implements DCStatusListener {
     private Cluster cluster = null;
     private String contactPoint ;
     private SessionRepository sessionRepository;
@@ -178,6 +181,9 @@ public class SessionManager {
     }
 
     private void setReplication(String replication) {
+        if (Utils.isStringEmpty(replication)){
+            return;
+        }
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             this.replication = (Map) objectMapper.readValue(replication, Map.class);
@@ -216,4 +222,8 @@ public class SessionManager {
         return new TokenAwarePolicy(DCAwareRoundRobinPolicy.builder().build());
     }
 
+    @Override
+    public void notifyClient(DCStatus dcStatus) {
+
+    }
 }

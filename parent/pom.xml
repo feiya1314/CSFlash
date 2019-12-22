@@ -10,13 +10,15 @@
 
     <packaging>pom</packaging>
     <properties>
-        <project.package.name>${project.artifactId}_${version}-${maven.build.timestamp}</project.package.name>
+        <project.package.version>${project.version}</project.package.version>
+        <project.package.name>${project.artifactId}_${project.version}-${maven.build.timestamp}</project.package.name>
         <project.package.version>1.0-SNAPSHOT.${maven.build.timestamp}</project.package.version>
         <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
         <maven.complier.source>1.8</maven.complier.source>
         <maven.complier.target>1.8</maven.complier.target>
         <maven.test.skip>true</maven.test.skip>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <root.path>${basedir}/..</root.path>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -28,4 +30,19 @@
         </dependencies>
     </dependencyManagement>
 
+    <repositories>
+        <repository>
+            <id>alimaven</id>
+            <name>aliyun maven</name>
+            <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
+        </repository>
+        <repository>
+            <id>jcenter</id>
+            <name>jcenter Repository</name>
+            <url>http://jcenter.bintray.com/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 </project>

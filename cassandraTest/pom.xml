@@ -10,7 +10,6 @@
         <version>1.0-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
-    <groupId>com.yufei.test</groupId>
     <artifactId>cassandraTest</artifactId>
     <properties>
         <jetcd-version>0.0.2</jetcd-version>
@@ -56,6 +55,11 @@
             <version>2.8.11.3</version>
         </dependency>
         <dependency>
+            <groupId>com.zhaoyanblog</groupId>
+            <artifactId>cassandra-secure-plugin</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>3.7</version>
@@ -73,6 +77,15 @@
             <artifactId>jetcd-core</artifactId>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.apache.cassandra/cassandra-all -->
+        <dependency>
+            <groupId>org.apache.cassandra</groupId>
+            <artifactId>cassandra-all</artifactId>
+            <version>3.0.15</version>
+            <scope>provided</scope>
+        </dependency>
+
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -85,12 +98,77 @@
         <!--<finalName>${project.package.name}</finalName>-->
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.1</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
                 </configuration>
+            </plugin>
+            <!--<plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>3.0.0-M1</version>
+                <configuration>
+                    <exculdes>
+                        <exculde>*.zip</exculde>
+                    </exculdes>
+                    &lt;!&ndash;<skip>true</skip>&ndash;&gt;
+                </configuration>
+            </plugin>-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <skipSource>true</skipSource>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <excludes>
+                        <exclude>*.properties</exclude>
+                        <exclude>*.xml</exclude>
+                        <exclude>*.tmp</exclude>
+                    </excludes>
+                    <!--<archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <mainClass>com.yufei.test.SaveCase</mainClass>
+                            &lt;!&ndash;依赖的jar包位置&ndash;&gt;
+                            <classpathPrefix>libs/</classpathPrefix>
+                        </manifest>
+                        <manifestEntries>
+                            &lt;!&ndash;指定conf 为class path&ndash;&gt;
+                            <class-path>conf/</class-path>
+                        </manifestEntries>
+                    </archive>-->
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <outputDirectory>${project.build.directory}/</outputDirectory>
+                    <finalName>${project.package.name}_${project.version}</finalName>
+                    <descriptors>
+                        <descriptor>${root.path}/tools/assembly/zip-package.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id> <!-- this is used for inheritance merges -->
+                        <phase>package</phase> <!-- bind to the packaging phase -->
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -14,8 +14,10 @@
     <artifactId>CSFlush</artifactId>
 
     <modules>
+        <module>../parent</module>
         <module>../cassandraTest</module>
         <module>../csMetricTest</module>
+        <module>../plugin</module>
     </modules>
 
 </project>

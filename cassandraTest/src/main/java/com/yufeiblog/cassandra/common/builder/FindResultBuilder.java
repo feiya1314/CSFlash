@@ -1,16 +1,25 @@
 package com.yufeiblog.cassandra.common.builder;
 
-import com.datastax.driver.core.*;
+import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.PagingState;
+import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.yufeiblog.cassandra.SessionRepository;
 import com.yufeiblog.cassandra.common.Condition;
 import com.yufeiblog.cassandra.common.Cursor;
 import com.yufeiblog.cassandra.common.PagingStateCursor;
+import com.yufeiblog.cassandra.model.Column;
 import com.yufeiblog.cassandra.model.TableDefination;
 import com.yufeiblog.cassandra.utils.Utils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 public class FindResultBuilder {
     private int appId;
@@ -31,7 +40,17 @@ public class FindResultBuilder {
     }
 
     public FindResultBuilder withColumns(String[] columns) {
-        this.columns = columns;
+        if (Utils.isArrayEmpty(columns)) {
+            TableDefination tableDefination = sessionRepository.getTableDefination(appId, tableName);
+            Column[] columnDefine = tableDefination.getColumns();
+            int length = columnDefine.length;
+            this.columns = new String[length];
+            for (int index = 0; index < length; index++) {
+                this.columns[index] = columnDefine[index].getColumnName();
+            }
+        } else {
+            this.columns = columns;
+        }
         preparePrefix();
         return this;
     }
@@ -42,17 +61,17 @@ public class FindResultBuilder {
             return this;
         }
         values = new Object[conditions.length];
-        TableDefination tableDefination = sessionRepository.getTableDefination(appId,tableName);
+        TableDefination tableDefination = sessionRepository.getTableDefination(appId, tableName);
         String[] pks = tableDefination.getPrimaryKeys();
         StringBuilder sb = new StringBuilder();
         sb.append(prefixSql).append(" WHERE ");
         int i = 0;
         for (Condition condition : conditions) {
             String column = condition.getColumnName();
-            int indexOfPk = ArrayUtils.indexOf(pks,column);
-            if (indexOfPk >= tableDefination.getPartitionKeyCount()){
+            int indexOfPk = ArrayUtils.indexOf(pks, column);
+            if (indexOfPk >= tableDefination.getPartitionKeyCount()) {
                 sb.append('C').append(column).append(')').append(condition.getOperator()).append("(?)").append(" AND ");
-            }else {
+            } else {
                 sb.append(column).append(condition.getOperator()).append("?").append(" AND ");
             }
             values[i++] = condition.getValue();
@@ -76,18 +95,21 @@ public class FindResultBuilder {
     public List<Map<String, Object>> find() {
         PreparedStatement preparedStatement = sessionRepository.prepareStatement(appId, sqlString);
         BoundStatement boundStatement = new BoundStatement(preparedStatement);
-        boundStatement.bind(values);
+        if (!Utils.isArrayEmpty(values)) {
+            boundStatement.bind(values);
+        }
         boundStatement.setFetchSize(limit);
         ResultSet resultSet = sessionRepository.getSession(appId).execute(boundStatement);
         pagingState = resultSet.getExecutionInfo().getPagingState();
         return getResults(resultSet);
     }
 
-    public String getCursor(){
+    public String getCursor() {
         PagingStateCursor cursor = new PagingStateCursor();
         cursor.setPagingState(pagingState);
         return cursor.cursorToString();
     }
+
     private List<Map<String, Object>> getResults(ResultSet resultSet) {
         List<Map<String, Object>> results = new ArrayList<>();
         Iterator<Row> iterator = resultSet.iterator();
@@ -97,10 +119,10 @@ public class FindResultBuilder {
                 break;
             }
             Row row = iterator.next();
-            Map<String,Object> result = new HashMap<>();
-            for(String str:columns){
-                Object obj=row.getObject(str);
-                result.put(str,obj);
+            Map<String, Object> result = new HashMap<>();
+            for (String str : columns) {
+                Object obj = row.getObject(str);
+                result.put(str, obj);
             }
             results.add(result);
             i++;
@@ -111,12 +133,14 @@ public class FindResultBuilder {
     private void preparePrefix() {
         StringBuilder stringBuilder = new StringBuilder();
         String columnStr = StringUtils.join(columns, ",");
+
         stringBuilder.append("SELECT ").append(columnStr)
                 .append(" from ")
                 .append(Utils.getKeyspace(appId))
                 .append(".")
                 .append(tableName);
         prefixSql = stringBuilder.toString();
+        sqlString = prefixSql;
     }
 
     public static void main(String[] args) {
