@@ -2,11 +2,13 @@ package com.yufei.test.plugin.cassandra.server;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 import org.apache.cassandra.auth.AuthKeyspace;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.CassandraRoleManager;
 import org.apache.cassandra.auth.RoleOptions;
 import org.apache.cassandra.auth.RoleResource;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.cql3.QueryProcessor;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
@@ -14,17 +16,35 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class ScramRoleManager extends CassandraRoleManager {
+    private final Set<Option> supportedOptions;
+    private final Set<Option> alterableOptions;
 
     //private SelectStatement authenticateStatement;
-    /*public ScramRoleManager() {
-        super();
-    }*/
+    public ScramRoleManager() {
+        supportedOptions = DatabaseDescriptor.getAuthenticator().getClass() == ScramAuthenticator.class
+                ? ImmutableSet.of(Option.LOGIN, Option.SUPERUSER, Option.PASSWORD)
+                : ImmutableSet.of(Option.LOGIN, Option.SUPERUSER);
+        alterableOptions = DatabaseDescriptor.getAuthenticator().getClass().equals(ScramAuthenticator.class)
+                ? ImmutableSet.of(Option.PASSWORD)
+                : ImmutableSet.<Option>of();
+    }
 
-/*    @Override
+    @Override
+    public Set<Option> supportedOptions() {
+        return supportedOptions;
+    }
+
+    @Override
+    public Set<Option> alterableOptions() {
+        return alterableOptions;
+    }
+
+    /*@Override
     public void setup() {
         super.setup();
         String query = String.format("SELECT %s FROM %s.%s WHERE role = ?",
