@@ -9,10 +9,8 @@ import java.lang.management.ManagementFactory;
 
 public class Launcher {
     public static void main(String[] args) throws Exception {
-        System.out.println("param" + System.getProperty("com.feiya.test"));
-        System.out.println("test");
         MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-        ObjectName configObj = new ObjectName("com.yufei:type=StorageService");
+        ObjectName configObj = new ObjectName("com.feiya:type=config");
         ConfigMBean config = new Config();
         mbs.registerMBean(config, configObj);
 
